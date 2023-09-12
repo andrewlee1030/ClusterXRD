@@ -1,7 +1,5 @@
 import numpy as np
-import pandas as pd
-from functools import reduce
-from scipy.integrate import simpson
+
 
 def remove_stubby_peaks(histogram_intensities,peak_data,min_peak_percentage=0.01):
     '''
@@ -68,21 +66,6 @@ def is_amorphous(crystalline_data,background_data,peak_data,max_peak_intensity_t
     if ratio_max_crystal_to_background > 5 and percent_area < 0.15 and max_peak_intensity / max_peak_intensity_this_wafer > 0.2: return False
     else: return True
 
-def get_percentage_area_under_raw_data(histogram_intensities):
-    '''
-    Calculates the percentage of the histogram that is under the intensity curve
-
-    Args:
-        histogram_intensities (Numpy array): array of histogram intensities
-
-    Returns:
-        float: value between 0 and 1 representing the proportion under the intensity curve
-    '''
-    max_intensity = np.max(histogram_intensities)
-    total_area = max_intensity * (len(histogram_intensities)-1)
-    area_under_histogram_intensities = simpson(histogram_intensities)
-
-    return area_under_histogram_intensities / total_area
 
 def smooth_data(histogram_intensities,smooth_radius = 5):
     '''

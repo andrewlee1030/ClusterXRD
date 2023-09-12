@@ -7,7 +7,24 @@ import shutil
 import os
 
 
-def plot_xrd_with_peaks(histogram_name,raw_data_dir = 'inputs', split_data_dir = 'outputs', peak_data_dir = 'peaks', save_dir = 'outputs',normalize_value = 1,save=True):
+def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'split_histograms', peak_data_dir = 'peaks', save_dir = 'plots',normalize_value = 1,save=True):
+
+    '''
+    Plots splot XRD histograms with peak location.
+
+    Args:
+        histogram_name (str): name of the histogram
+        raw_data_dir (str), default '.': path to raw histogram intensities
+        split_data_dir (str), default 'split_histograms':  path to split histogram intensities
+        peak_data_dir (str), default 'peaks': path to peak data
+        save_dir (str), default 'plots': path to save plots into
+        normalize_value (float), default 1: value to divide histogram intensities by for normalization purposes
+        save (bool), default True: boolean for whether or not to save plots
+
+    Returns:
+        None: plots XRD histograms and saves them (if save==True)
+
+    '''
 
     try:
         peak_data = pd.read_csv(f'{peak_data_dir}/{histogram_name}_peaks.csv')
@@ -37,7 +54,6 @@ def plot_xrd_with_peaks(histogram_name,raw_data_dir = 'inputs', split_data_dir =
     except:
         pass
 
-    #plt.ylim([0,1])
     plt.legend()
 
 

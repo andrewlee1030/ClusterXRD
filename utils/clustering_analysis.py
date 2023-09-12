@@ -5,7 +5,18 @@ import os
 import shutil
 import matplotlib.pyplot as plt
 
-def clustering_convergence_check(post_clustering_dir,cluster_dir): # may not need this
+def clustering_convergence_check(post_clustering_dir,cluster_dir): 
+    '''
+    Checks whether the number of additional/fewer clusters has converged. If so, subsequent rounds of clustering are halted.
+
+    Args:
+        post_clustering_dir (str): path to directory with post clustering analysis files
+        cluster_dir (str): path to directory with the cluster log
+
+    Returns:
+        None: writes to local log file if convergence is reached
+    '''
+
     log_a = open(f'{cluster_dir}/cluster_log.txt','a')
     log_r = open(f'{cluster_dir}/cluster_log.txt','r').read()
 
@@ -95,16 +106,28 @@ def get_similarity_stats(similarities,prefix):
     except:
         return dict() # return empty dictionary when there are no phases in a cluster
 
-def get_similarity_matrix(cluster_features,wafer_dir,xrd_data_dir):
-    
+def get_similarity_matrix(cluster_features,cluster_dir,split_histograms_dir):
+    '''
+    Calculates pairwise similarities between histograms from each cluster.
+
+    Args:
+        cluster_features (pandas DataFrame): features values with cluster labels for each histogram
+        cluster_dir (str): path to files for this clustering iteration 
+        split_histograms_dir (str): path to background separated histograms
+
+    Returns:
+        None: writes similarity matrix to a local file
+
+    '''
+
     try:
         unique_clusters = list(set(cluster_features['Cluster labels']))
     except:
         return None
 
 
-    if os.path.isdir(f'{wafer_dir}/similarity_scores'): shutil.rmtree(f'{wafer_dir}/similarity_scores')
-    os.makedirs(f'{wafer_dir}/similarity_scores',exist_ok=True)
+    if os.path.isdir(f'{cluster_dir}/similarity_scores'): shutil.rmtree(f'{cluster_dir}/similarity_scores')
+    os.makedirs(f'{cluster_dir}/similarity_scores',exist_ok=True)
 
     for cluster in unique_clusters: # loop through clusters
         if cluster == -1.0: continue # skip amorphous
@@ -112,7 +135,7 @@ def get_similarity_matrix(cluster_features,wafer_dir,xrd_data_dir):
         this_cluster_features = cluster_features[cluster_features['Cluster labels'] == cluster]
         
         cluster_plot_names = this_cluster_features['name']
-        xrd_data_list = [np.genfromtxt(f'{xrd_data_dir}/{name}_crystalline') for name in cluster_plot_names]
+        xrd_data_list = [np.genfromtxt(f'{split_histograms_dir}/{name}_crystalline') for name in cluster_plot_names]
 
 
         xrd_data = pd.DataFrame(data = np.vstack([xrd_data_list[i] for i in range(len(xrd_data_list))])).T
@@ -121,9 +144,9 @@ def get_similarity_matrix(cluster_features,wafer_dir,xrd_data_dir):
         # get cosine similarities
         cosine_similarities = cosine_similarity(xrd_data.T) # this transpose is important for the cosine similarity function
 
-        pd.DataFrame(data=cosine_similarities).set_axis(cluster_plot_names,axis=1).set_axis(cluster_plot_names,axis=0).to_csv(f'{wafer_dir}/similarity_scores/{int(cluster)}_cosine.csv')
+        pd.DataFrame(data=cosine_similarities).set_axis(cluster_plot_names,axis=1).set_axis(cluster_plot_names,axis=0).to_csv(f'{cluster_dir}/similarity_scores/{int(cluster)}_cosine.csv')
  
-def plot_histogram(feature_set,title,across_all_wafers,has_crystalline, fig_dir = '.'):
+def plot_histogram(feature_set,title,across_all_wafers,has_crystalline, fig_dir = '.'): # unused
     similarity_metrics = has_crystalline[feature_set].to_numpy().flatten()
     similarity_metrics_no_nan = similarity_metrics[~np.isnan(similarity_metrics)]
     if across_all_wafers: 
@@ -144,7 +167,7 @@ def plot_histogram(feature_set,title,across_all_wafers,has_crystalline, fig_dir 
     plt.savefig(f'{fig_dir}/figs/{title}.png',dpi=300)
     plt.close()
 
-def plot_histogram_per_wafer(similarities,title,fig_dir = None,nbins=20):
+def plot_histogram_per_wafer(similarities,title,fig_dir = None,nbins=20): # unused
     counts,bins = np.histogram(similarities,bins=nbins)
     center = (bins[:-1] + bins[1:])/2
     width = (bins[1] - bins[0])

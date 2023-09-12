@@ -296,7 +296,6 @@ class ezcluster():
             
             # floating peak features
             n_floating_peaks = get_n_floating_peaks(crystal_data, peak_data,min_threshold = 10)
-            # pse_max, pse_mu, pse_std = get_max_mean_std(peak_start_end_intensities) # pse = peak_start_end # v1
             pse_pct_25, pse_pct_75, pse_mu, pse_max = get_derived_features(peak_start_end_intensities)
 
             final_feature_dict = {'name':filename, 
