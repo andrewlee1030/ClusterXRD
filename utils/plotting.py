@@ -21,7 +21,6 @@ def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'spl
 
     Returns:
         None: plots XRD histograms and saves them (if save==True)
-
     '''
 
     try:
@@ -73,6 +72,9 @@ def save_kmeans_plots(kmeans, wafer_dir, peak_plot_dir, non_amorphous_names, gif
         gifs (bool): if True, generates histogram gifs for each cluster
         gifs_dir (str): directory to save gifs into
         save_raw_plot (bool): if True, also moves raw histogram plots to cluster directories
+    
+    Returns:
+        None: moves plots locally
     '''
     unique_kmeans_labels = list(set(kmeans.labels_))
     for unique_label in unique_kmeans_labels:
@@ -95,6 +97,20 @@ def save_kmeans_plots(kmeans, wafer_dir, peak_plot_dir, non_amorphous_names, gif
         if gifs == True: make_gif(label_dir,f'label_{unique_label}',gif_dir) 
 
 def overclustering_plots(intra_cluster_distances, cluster, n_under_cutoff, inter_cluster_distances,post_clustering_dir):
+    '''
+    Visualize intra/inter cluster feature distances to understand overclustering analysis.
+
+    Args:
+        intra_cluster_distances (numpy array): 2D array of pairwise feature distances between histograms of a given cluster
+        cluster (int): the cluster number being analyzed
+        n_under_cutoff (int): the number of cluster pairs that are under the min distance cutoff
+        inter_cluster_distances (numpy array): 2D array of pairwise cluster centroid-centroid feature disteances
+        post_clustering_dir (str): directory name to save plots to
+    
+    Returns:
+        None: saves plots locally
+    '''
+    
     # generate plots - this take a while so it's possible to turn this off
     fig, ax = plt.subplots()
     ax.hist(intra_cluster_distances, label='Point-point',alpha=0.6,color='green')
@@ -117,6 +133,19 @@ def overclustering_plots(intra_cluster_distances, cluster, n_under_cutoff, inter
     plt.close()
 
 def underclustering_plots(similar_pair_pca_scaled_feature_distances,dissimilar_pair_pca_scaled_feature_distances,cluster,percent_dissimilar_over_threshold,post_clustering_dir):
+    '''
+    Visualize intra-cluster feature distances between histograms of high and low similarity.
+
+    Args:
+        similar_pair_pca_scaled_feature_distances (numpy array): pairwise feature distances for similar histograms
+        dissimilar_pair_pca_scaled_feature_distances (numpy array): pairwise feature distances for dissimilar histograms
+        cluster (int): the cluster number being analyzed
+        percent_dissimilar_over_threshold (float): the percent of dissimilar pairwise distances above a threshold set for the similar pairwise distances
+        post_clustering_dir (str): directory name to save plots to
+
+    Returns:
+        None: saves plots locally
+    '''
     # generate distance plots - will take extra time, can turn off
     plt.figure()
     plt.hist(similar_pair_pca_scaled_feature_distances,label='Similar Pairs',alpha=0.5,bins=20,density=True)
@@ -125,5 +154,5 @@ def underclustering_plots(similar_pair_pca_scaled_feature_distances,dissimilar_p
     plt.xlabel('PCA Scaled Feature Distance')
     plt.ylabel('Probability Distributions')
     plt.title(f'Cluster: {cluster} | Pct over threshold: {percent_dissimilar_over_threshold}')
-    plt.savefig(f'{self.post_clustering_dir}/{cluster}_underclustering_plot.png',dpi=300)
+    plt.savefig(f'{post_clustering_dir}/{cluster}_underclustering_plot.png',dpi=300)
     plt.close()
