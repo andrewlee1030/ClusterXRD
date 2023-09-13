@@ -12,9 +12,9 @@ from tqdm import tqdm
 
 
 
-class ezcluster():
+class clusterXRD():
     '''
-    Should be initialized once per wafer/set of XRD histograms to be analyzed.
+    Should be initialized once per wafer/set of XRD histograms to be analyzed. Contains individual functions that can be used to carry out clustering
     '''
     def __init__(self,k_clusters=4,input_dir=None,filename_suffix='_1D.csv',features=None,split_histogram_dir=None,peak_dir=None,plot_dir=None,features_dir=None):
         '''
@@ -611,38 +611,44 @@ class ezcluster():
         self.k_clusters = current_n_clusters + additional_n_clusters
         self.perform_clustering(self,clustering_name = self.clustering_name)
 
+def ezCluster(k_clusters,input_dir,filename_suffix,n_clustering_rounds):
+    '''
+    Call this to initiate the full clustering loop for a single wafer/set of histograms to cluster.
 
-if __name__ == '__main__':
-
-    # initialize required values
-
-    clus = ezcluster() # initialize for a SINGLE wafer, parallelized when possible
-
-    # split histograms
+    Args:
+        k_clusters (int): the number of clusters in the intial round of clustering
+        input_dir (str): path to the XRD histograms for clustering
+        filename_suffix (str): common suffix at the end of each histogram filename
+        n_clustering_rounds (int): max number of clustering rounds to perform
+    
+    Returns:
+        None: Will place clusters in a directory within the input_dir
+    '''
+    clus = clusterXRD(k_clusters=k_clusters,input_dir=input_dir,filename_suffix=filename_suffix)
     
     array_length = clus.histograms.shape[1]
     smooth_q_background_setting = 20 * (array_length-1)/800 # smooth q value of 20 is calibrated to an array of length 800
-    clus.split_histogram(smooth_q_background_setting)
     
-    # find peaks 
-    clus.find_peaks_parallelized_wrapper()
+    clus.split_histogram(smooth_q_background_setting)
 
-    # plot patterns 
+    clus.find_peaks_parallelized_wrapper()
+    
     clus.plot_split_data(save_dir='plots')
 
-    # calculate features
     clus.calculate_features()
 
-    # scale features
     clus.scale_features()
 
-    # initial clustering
     clus.perform_clustering()
 
-    # for i in tqdm(range(10),desc='Clustering Iterations'): # do four iterations underclustering analysis and reclustering
-    #     get_cluster_similarities(self,plots)
-    #     underclustering_analysis(wafers,previous_clustering_name,plots)
-    #     overclustering_analysis(wafers,previous_clustering_name,plots)
-    #     clustering_convergence_check(wafers,previous_clustering_name)  
-    #     perform_reclustering(wafers,previous_clustering_name,clustering_name,use_pca,generate_gif,generate_tsne)
-    #     previous_clustering_name = clustering_name
+    for i in range(n_clustering_rounds):
+
+        clus.get_cluster_similarities()
+
+        clus.underclustering_analysis()
+
+        clus.overclustering_analysis()
+
+        clustering_convergence_check(clus.post_clustering_dir,clus.cluster_dir)
+
+        clus.perform_reclustering()
