@@ -1,3 +1,6 @@
 __pycache__
 .DS_STORE
 **/tests/*
+build/*
+dist/*
+ClusterXRD.egg-info/*
