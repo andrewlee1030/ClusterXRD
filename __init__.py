@@ -1,1 +1,1 @@
-from .easyCluster import *
+from .clusterXRD import *
