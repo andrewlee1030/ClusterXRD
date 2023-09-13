@@ -7,5 +7,5 @@ setup(name='ClusterXRD',
     install_requires = ['matplotlib', 'scikit-learn', 'numpy','pandas'],
     author='Andrew S. Lee',
     author_email='andrewlee1030@gmail.com',
-    python_requires='>=3.9.0',
+    python_requires='>=3.11',
     )
