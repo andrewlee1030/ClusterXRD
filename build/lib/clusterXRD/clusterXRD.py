@@ -8,8 +8,6 @@ from sklearn import preprocessing
 import shutil
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from tqdm import tqdm
-
 
 
 class clusterXRD():

@@ -1,3 +1,6 @@
 Metadata-Version: 2.1
 Name: clusterXRD
 Version: 1.0
+Author: Andrew S. Lee
+Author-email: andrewlee1030@gmail.com
+Requires-Python: >=3.7.0
