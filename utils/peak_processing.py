@@ -14,7 +14,6 @@ def find_peaks(histogram_intensities,histogram_filename,save_dir,stubby_peak_rem
             stubby_peak_removal (bool), default 'True': if True, will remove small/stubby peaks
         Returns:
             pandas dataframe: peak starts, locations, and ends
-    
         '''
         n_datapoints = len(histogram_intensities)
 
@@ -132,7 +131,6 @@ def is_amorphous(crystalline_data,background_data,peak_data,max_peak_intensity_t
 
     Returns:
         boolean: True for an amorphous sample
-
     '''
     peak_intensities = crystalline_data[peak_data['Peak Index']]
     amorphous_intensities_at_peak_positions = background_data[peak_data['Peak Index']]
@@ -157,7 +155,6 @@ def is_amorphous(crystalline_data,background_data,peak_data,max_peak_intensity_t
     if ratio_max_crystal_to_background > 5 and percent_area < 0.15 and max_peak_intensity / max_peak_intensity_this_wafer > 0.2: return False
     else: return True
 
-
 def smooth_data(histogram_intensities,smooth_radius = 5):
     '''
     Take the rolling average of intensity values over a defined radius
@@ -178,7 +175,16 @@ def smooth_data(histogram_intensities,smooth_radius = 5):
     return np.sum(intensities,axis=0) / np.sum(coeffs)
 
 def euclidean(array_1,array_2):
+    '''
+    Takes the euclidean distance between two arrays.
 
+    Args:
+        array_1 (numpy array): array of data
+        array_2 (numpy array): array of data (must be same length as array_1)
+    
+    Outputs:
+        float: euclidean distance
+    '''
     difference = array_1 - array_2
     difference_squared = difference **2
 
@@ -186,8 +192,17 @@ def euclidean(array_1,array_2):
 
     return summed_difference_squared ** 0.5
 
-
 def get_line_array_from_two_points(point1,point2,n=100):
+    '''
+    Get x,y coordinates of points on a line between two 2D points.
+
+    Args:
+        point1 (tuple): x and y coordinates of a point
+        point2 (tuple): x and y coordinates of another point
+    
+    Returns:
+        numpy array: 2D array with x and y coordinates of points on the line between point1 and point2
+    '''
     x1, y1 = point1
     x2, y2 = point2
     
@@ -197,6 +212,18 @@ def get_line_array_from_two_points(point1,point2,n=100):
     return np.vstack([x_values,y_values]).T
 
 def get_best_offset(histogram_array, background_array, n_array_len = 50, max_offset = 30):
+    '''
+    Find the optimal intensity offset for the split_histogram function.
+
+    Args:
+        histogram_array (numpy array): raw histogram intensities
+        background_array (numpy array): raw background intensities
+        n_array_len (int), default 50: number of offset values between 0 and the max offset value to evaluate
+        max_offset (int), default 30: maximum offset value
+    
+    Returns:
+        float: optimal offset intensity
+    '''
     offsets = np.linspace(0,max_offset,n_array_len)
 
     background_tiled = np.broadcast_to(background_array,[len(offsets),len(background_array)])
