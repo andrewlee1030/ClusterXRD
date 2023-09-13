@@ -1,5 +1,5 @@
 """
-Code modified from Oliver Hoidn's package here: https://github.com/hoidn/xrd_clustering
+All code here is taken from Oliver Hoidn's package here: https://github.com/hoidn/xrd_clustering
 """
 
 import os
