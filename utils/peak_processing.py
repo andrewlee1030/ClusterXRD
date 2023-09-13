@@ -1,5 +1,96 @@
 import numpy as np
+from functools import reduce
+import pandas as pd
+from .featurization import *
 
+def find_peaks(histogram_intensities,histogram_filename,save_dir,stubby_peak_removal=True): 
+        '''
+        Identifies peak starts, locations, and ends for a given histogram intensity array.
+
+        Args:
+            histogram_intensities (numpy array): array of histogram intensities
+            histogram_filename (str): filename for the histogram data from which peaks are identified
+            save_dir (str): directory in which peak information will be saved, if None then nothing will be saved
+            stubby_peak_removal (bool), default 'True': if True, will remove small/stubby peaks
+        Returns:
+            pandas dataframe: peak starts, locations, and ends
+    
+        '''
+        n_datapoints = len(histogram_intensities)
+
+        roll_index_lengths = [1,round(n_datapoints/1000),round(n_datapoints/200)] # maximum roll index length cannot be longer than half the width of the skinniest peak you wish to detect (measured in index units)
+
+        peak_indices_list = []
+        peak_starts_list = []
+        peak_ends_list = []
+        valley_indices_list = []
+
+        for roll_index_length in roll_index_lengths:
+            A = histogram_intensities 
+            B = np.roll(histogram_intensities,roll_index_length) 
+            C = A - B # change from previous point
+            D = np.roll(C,-roll_index_length) # change to the next point
+
+            E = C > 0 
+            F = D > 0 
+            G = C < 0 
+            H = D < 0 
+            I = C == 0 
+            J = D == 0
+            
+            peak_indices_list += [np.argwhere(E & H).flatten()]
+            peak_starts_list += [np.argwhere(I & F).flatten()]
+            peak_ends_list += [np.argwhere(G & J).flatten()]
+            valley_indices_list += [np.argwhere(G & F).flatten()]
+        
+        all_peak_indices = reduce(np.intersect1d,peak_indices_list) # find intersection between all peak indices lists
+        all_peak_starts = peak_starts_list[0]
+        all_peak_ends = peak_ends_list[0]
+        all_valley_indices = valley_indices_list[0]
+
+        # add all valleys to starts and ends since one valley = one start + one end
+
+        all_peak_starts = np.sort(np.concatenate([all_peak_starts,all_valley_indices]))
+        all_peak_ends = np.sort(np.concatenate([all_peak_ends,all_valley_indices]))
+        
+        max_number_peaks = len(all_peak_indices)
+
+        peak_start_indices = np.zeros(max_number_peaks,dtype=int)
+        peak_indices = np.zeros(max_number_peaks,dtype=int)
+        peak_end_indices = np.zeros(max_number_peaks,dtype=int)
+        
+        peak_group_number = 0
+        
+        for i in all_peak_indices: # loop through each peak and find suitable corresponding start and end indices
+            
+            potential_starts = np.flip(all_peak_starts[all_peak_starts < i]) # need to flip because potential starts are evaluated from high values to low!
+            potential_ends = all_peak_ends[all_peak_ends > i]
+
+            start = 0  #initialize default value in case no corresponding start can be found
+            end = 0
+            
+            try: start = potential_starts[0]
+            except: pass
+
+            try: end = potential_ends[0]
+            except: pass
+
+            peak_start_indices[peak_group_number] = start
+            peak_indices[peak_group_number] = i
+            peak_end_indices[peak_group_number] = end
+            peak_group_number += 1
+        
+        df = pd.DataFrame(data={'Peak Start Index': peak_start_indices,
+                                'Peak Index': peak_indices,
+                                'Peak End Index': peak_end_indices},dtype=int)
+
+        df = df[~(df == 0).any(axis=1)] # gets rid of any incomplete / fake peaks
+
+        if stubby_peak_removal == True: df = remove_stubby_peaks(histogram_intensities,df)
+
+        if save_dir: df.to_csv(f'{save_dir}/{histogram_filename}_peaks.csv')
+
+        return df
 
 def remove_stubby_peaks(histogram_intensities,peak_data,min_peak_percentage=0.01):
     '''

@@ -18,10 +18,13 @@ class ezcluster():
     '''
     def __init__(self,k_clusters=4,input_dir=None,filename_suffix='_1D.csv',features=None,split_histogram_dir=None,peak_dir=None,plot_dir=None,features_dir=None):
         '''
-        Defines required information for clustering
+        Initializes data and variables for clustering on a given histogram.
 
         Args:
+            k_clusters (int): number of clusters for first iteration of clustering
             input_dir (str): directory of raw histograms
+            filename_suffix (str): common filename suffix for all raw histogram data files
+            features ()
         '''
         
         self.k_clusters = k_clusters
@@ -71,100 +74,15 @@ class ezcluster():
 
         print(f'Initialized clustering class for {self.input_dir}')
 
-    def find_peaks(self,histogram_intensities,histogram_filename,save_dir='peaks',stubby_peak_removal=True): 
-        '''
-        Identifies peak starts, locations, and ends for a given histogram intensity array. DO NOT run directly, use the parallelized wrapper instead
-
-        Args:
-            histogram_intensities (numpy array): array of histogram intensities
-            histogram_filename (str): filename for the histogram data from which peaks are identified
-            save_dir (str), default 'Peaks': directory in which peak information will be saved, if None then nothing will be saved
-            stubby_peak_removal (bool), default 'True': if True, will remove small/stubby peaks
-        Returns:
-            pandas dataframe: peak starts, locations, and ends
-    
-        '''
-        n_datapoints = len(histogram_intensities)
-
-        roll_index_lengths = [1,round(n_datapoints/1000),round(n_datapoints/200)] # maximum roll index length cannot be longer than half the width of the skinniest peak you wish to detect (measured in index units)
-
-        peak_indices_list = []
-        peak_starts_list = []
-        peak_ends_list = []
-        valley_indices_list = []
-
-        for roll_index_length in roll_index_lengths:
-            A = histogram_intensities 
-            B = np.roll(histogram_intensities,roll_index_length) 
-            C = A - B # change from previous point
-            D = np.roll(C,-roll_index_length) # change to the next point
-
-            E = C > 0 
-            F = D > 0 
-            G = C < 0 
-            H = D < 0 
-            I = C == 0 
-            J = D == 0
-            
-            peak_indices_list += [np.argwhere(E & H).flatten()]
-            peak_starts_list += [np.argwhere(I & F).flatten()]
-            peak_ends_list += [np.argwhere(G & J).flatten()]
-            valley_indices_list += [np.argwhere(G & F).flatten()]
-        
-        all_peak_indices = reduce(np.intersect1d,peak_indices_list) # find intersection between all peak indices lists
-        all_peak_starts = peak_starts_list[0]
-        all_peak_ends = peak_ends_list[0]
-        all_valley_indices = valley_indices_list[0]
-
-        # add all valleys to starts and ends since one valley = one start + one end
-
-        all_peak_starts = np.sort(np.concatenate([all_peak_starts,all_valley_indices]))
-        all_peak_ends = np.sort(np.concatenate([all_peak_ends,all_valley_indices]))
-        
-        max_number_peaks = len(all_peak_indices)
-
-        peak_start_indices = np.zeros(max_number_peaks,dtype=int)
-        peak_indices = np.zeros(max_number_peaks,dtype=int)
-        peak_end_indices = np.zeros(max_number_peaks,dtype=int)
-        
-        peak_group_number = 0
-        
-        for i in all_peak_indices: # loop through each peak and find suitable corresponding start and end indices
-            
-            potential_starts = np.flip(all_peak_starts[all_peak_starts < i]) # need to flip because potential starts are evaluated from high values to low!
-            potential_ends = all_peak_ends[all_peak_ends > i]
-
-            start = 0  #initialize default value in case no corresponding start can be found
-            end = 0
-            
-            try: start = potential_starts[0]
-            except: pass
-
-            try: end = potential_ends[0]
-            except: pass
-
-            peak_start_indices[peak_group_number] = start
-            peak_indices[peak_group_number] = i
-            peak_end_indices[peak_group_number] = end
-            peak_group_number += 1
-        
-        df = pd.DataFrame(data={'Peak Start Index': peak_start_indices,
-                                'Peak Index': peak_indices,
-                                'Peak End Index': peak_end_indices},dtype=int)
-
-        df = df[~(df == 0).any(axis=1)] # gets rid of any incomplete / fake peaks
-
-        if stubby_peak_removal == True: df = remove_stubby_peaks(histogram_intensities,df)
-
-        if save_dir: df.to_csv(f'{self.peak_dir}/{histogram_filename}_peaks.csv')
-
-        return df
-
     def find_peaks_parallelized_wrapper(self,save_dir='peaks'):
         '''
-        Wrapper function to run the 'find_peaks' function in parallel for all histograms within a wafer
+        Wrapper function to run the 'find_peaks' function in parallel for all histograms within a wafer. Identifies peak starts, locations, and ends for histograms.
 
-
+        Args:
+            save_dir (str): directory name for peak information to be saved to
+        
+        Returns:
+            None: writes peaks to local files
         '''
         
         if self.peak_dir != None: return None # if True, then peaks have already been identified
@@ -181,13 +99,25 @@ class ezcluster():
         for i in range(len(self.histograms)):
             histogram_intensities = self.histograms[i]
             histogram_filename = self.histogram_filenames[i]
-            multiprocess_plotting_inputs += [[histogram_intensities,histogram_filename]]
+            multiprocess_plotting_inputs += [[histogram_intensities,histogram_filename,self.peak_dir]]
         
-        p.starmap(self.find_peaks, multiprocess_plotting_inputs)
+        p.starmap(find_peaks, multiprocess_plotting_inputs)
         print(f'Finished finding peaks for {self.input_dir}')
 
     def split_histogram(self,smooth_q_background_setting, save_dir = 'split_histograms', save=True):
         
+        '''
+        Splits raw histograms into the crystalline and background components
+
+        Args:
+            smooth_q_background_setting (float): hyperparameter for background separation
+            save_dir (str), default 'split_histograms' : directory name to save split histogram files into
+
+        Returns:
+            None: saves split histogram data into local files
+        
+        '''
+
         if self.split_histogram_dir != None: return None # if True, then histograms have already been split
 
         
@@ -220,10 +150,17 @@ class ezcluster():
                 np.savetxt(f'{self.split_histogram_dir}/{fname}_crystalline',crystalline_data)
 
         print(f'Finished splitting histograms for {self.input_dir}')
-        return background,fastq
 
     def plot_split_data(self,save_dir='plots'):
-        
+        '''
+        Plot the split XRD histograms with peak information.
+
+        Args:
+            save_dir (str), default 'plots': directory name for plots to be saved into
+
+        Returns:
+            None: this function calls the plotting function which saves plots locally
+        '''
         if self.plot_dir != None: return None # if True, then plots have already been generated
 
         n_parallel_cpus = multiprocessing.cpu_count() - 2 # reserve 2 cores
@@ -235,16 +172,20 @@ class ezcluster():
         self.plot_dir = f'{self.input_dir}/{save_dir}'
         os.makedirs(self.plot_dir,exist_ok=True)
 
+        # set up multiprocessing inputs
         for filename in self.histogram_filenames:
             multiprocess_plotting_inputs += [[filename,self.input_dir, self.split_histogram_dir, self.peak_dir, self.plot_dir]]
 
+        # execute multiprocessing
         p.starmap(plot_xrd_with_peaks, multiprocess_plotting_inputs)
         print(f'Finished plotting histograms for {self.input_dir}')
 
     def calculate_features(self):
+        '''
+        Calculates features to represent histograms for clustering.
+        '''
 
         if self.features_dir != None: return None # if True, then features have already been calculated
-
 
         self.features_dir = f'{self.input_dir}/features'
         os.makedirs(self.features_dir,exist_ok=True)
@@ -252,93 +193,98 @@ class ezcluster():
         peak_feats = [] # list of dictionaries
         feat_stats = []
 
+        for i in range(len(self.histogram_filenames)): # for each histogram
+            try:
+                # load histogram data
+                filename = self.histogram_filenames[i]
+                raw_intensities = self.histograms[i]
+                q_data = self.q_data[i]
+                peak_data = pd.read_csv(f'{self.peak_dir}/{filename}_peaks.csv', index_col=0)
+                background_data = np.genfromtxt(f'{self.split_histogram_dir}/{filename}_background')
+                crystal_data = np.genfromtxt(f'{self.split_histogram_dir}/{filename}_crystalline')
 
-        for i in range(len(self.histogram_filenames)):
-            # try:
-            filename = self.histogram_filenames[i]
-            raw_intensities = self.histograms[i]
-            q_data = self.q_data[i]
-            peak_data = pd.read_csv(f'{self.peak_dir}/{filename}_peaks.csv', index_col=0)
-            background_data = np.genfromtxt(f'{self.split_histogram_dir}/{filename}_background')
-            crystal_data = np.genfromtxt(f'{self.split_histogram_dir}/{filename}_crystalline')
+                # calculate some properties
+                max_peak_intensity_this_wafer = np.max(crystal_data)
+                q_width = np.max(q_data) - np.min(q_data) # need to normalize all widths by the q width! - units of inverse angstroms
 
-            max_peak_intensity_this_wafer = np.max(crystal_data)
+                # first check if amorphous
+                amorphous_status = is_amorphous(crystal_data,background_data,peak_data,max_peak_intensity_this_wafer)
+                
+                # set up data for feature generation
+                peaks = [crystal_data[row['Peak Start Index']:row['Peak End Index']+1] for i,row in peak_data.iterrows() ]
+                peak_intensities = crystal_data[peak_data['Peak Index']]
+                peak_base_widths = get_peak_base_widths(peak_data,crystal_data,q_width)
+                fwhms = get_fwhm_v2(peaks,crystal_data, q_width) # this will replace the fwhm above
+                hms = peak_intensities / 2.0
+                peak_start_end_intensities = get_peak_start_end_intensities(crystal_data, peak_data)
 
-            q_width = np.max(q_data) - np.min(q_data) # need to normalize all widths by the q width! - units of inverse angstroms
+            ################## FEATURES ARE GENERATED BELOW ##################
 
-            # first check if amorphous
-            amorphous_status = is_amorphous(crystal_data,background_data,peak_data,max_peak_intensity_this_wafer)
-            
-            # set up data for feature generation
-            peaks = [crystal_data[row['Peak Start Index']:row['Peak End Index']+1] for i,row in peak_data.iterrows() ]
-            peak_intensities = crystal_data[peak_data['Peak Index']]
-            peak_base_widths = get_peak_base_widths(peak_data,crystal_data,q_width)
-            fwhms = get_fwhm_v2(peaks,crystal_data, q_width) # this will replace the fwhm above
-            hms = peak_intensities / 2.0
-            peak_start_end_intensities = get_peak_start_end_intensities(crystal_data, peak_data)
+                # number of peaks features
+                peak_bin_sizes = np.array([0.10,0.20,0.50,0.80]) * np.max(peak_intensities)
+                n_peaks_per_bin_size = get_n_peaks_per_bin_size(peak_intensities,peak_bin_sizes)
+                n_peaks = np.sum(n_peaks_per_bin_size)
 
-        ################## ALL FEATURES ARE BELOW ##################
+                # peak intensity features
+                i_pct_25, i_pct_75, i_mu, i_max = get_derived_features(peak_intensities)
+                
+                # peak width features
+                fwhm_pct_25, fwhm_pct_75, fwhm_mu, fwhm_max = get_derived_features(fwhms)
+                bw_pct_25, bw_pct_75, bw_mu, bw_max = get_derived_features(peak_base_widths)
 
-            # number of peaks features
-            peak_bin_sizes = np.array([0.10,0.20,0.50,0.80]) * np.max(peak_intensities)
-            n_peaks_per_bin_size = get_n_peaks_per_bin_size(peak_intensities,peak_bin_sizes)
-            n_peaks = np.sum(n_peaks_per_bin_size)
+                # peak area features
+                pct_area_under_raw_data = get_percentage_area_under_raw_data(raw_intensities) # defined in peak_processing.py from codes_for_import
+                
+                # floating peak features
+                n_floating_peaks = get_n_floating_peaks(crystal_data, peak_data,min_threshold = 10)
+                pse_pct_25, pse_pct_75, pse_mu, pse_max = get_derived_features(peak_start_end_intensities)
 
-            # peak intensity features
-            i_pct_25, i_pct_75, i_mu, i_max = get_derived_features(peak_intensities)
-            
-            # peak width features
-            fwhm_pct_25, fwhm_pct_75, fwhm_mu, fwhm_max = get_derived_features(fwhms)
-            bw_pct_25, bw_pct_75, bw_mu, bw_max = get_derived_features(peak_base_widths)
 
-            # peak area features
-            pct_area_under_raw_data = get_percentage_area_under_raw_data(raw_intensities) # defined in peak_processing.py from codes_for_import
-            
-            # floating peak features
-            n_floating_peaks = get_n_floating_peaks(crystal_data, peak_data,min_threshold = 10)
-            pse_pct_25, pse_pct_75, pse_mu, pse_max = get_derived_features(peak_start_end_intensities)
+                # construct dict for writing feature csv
+                final_feature_dict = {'name':filename, 
+                        'n_peaks': n_peaks,
+                        'I_max': i_max, 
+                        'I_mu': i_mu, 
+                        'I_25th_percentile': i_pct_25, 
+                        'I_75th_percentile': i_pct_75,
+                        'fwhm_25th_percentile': fwhm_pct_25, 
+                        'fwhm_75th_percentile': fwhm_pct_75,
+                        'fwhm_max': fwhm_max, 
+                        'fwhm_mu': fwhm_mu, 
+                        'amorphous': amorphous_status, 
+                        'bw_max': bw_max,
+                        'bw_mu':bw_mu,
+                        'bw_25th_percentile': bw_pct_25, 
+                        'bw_75th_percentile': bw_pct_75,
+                        'n_floating_peaks': n_floating_peaks,
+                        'pse_max': pse_max,
+                        'pse_mu': pse_mu,
+                        'pse_25th_percentile': pse_pct_25, 
+                        'pse_75th_percentile': pse_pct_75, 
+                        'pct_area_under_raw_data': pct_area_under_raw_data} # v2
 
-            final_feature_dict = {'name':filename, 
-                    'n_peaks': n_peaks,
-                    'I_max': i_max, 
-                    'I_mu': i_mu, 
-                    'I_25th_percentile': i_pct_25, 
-                    'I_75th_percentile': i_pct_75,
-                    'fwhm_25th_percentile': fwhm_pct_25, 
-                    'fwhm_75th_percentile': fwhm_pct_75,
-                    'fwhm_max': fwhm_max, 
-                    'fwhm_mu': fwhm_mu, 
-                    'amorphous': amorphous_status, 
-                    'bw_max': bw_max,
-                    'bw_mu':bw_mu,
-                    'bw_25th_percentile': bw_pct_25, 
-                    'bw_75th_percentile': bw_pct_75,
-                    'n_floating_peaks': n_floating_peaks,
-                    'pse_max': pse_max,
-                    'pse_mu': pse_mu,
-                    'pse_25th_percentile': pse_pct_25, 
-                    'pse_75th_percentile': pse_pct_75, 
-                    'pct_area_under_raw_data': pct_area_under_raw_data} # v2
+                # add features for number of peaks by size
+                for i in range(len(n_peaks_per_bin_size)):
+                    if i == 0: feature_name = f'n_peaks_size_{i}'
+                    else: feature_name = f'n_peaks_size_{i}'
+                    final_feature_dict[feature_name] = n_peaks_per_bin_size[i]
 
-            # add features for number of peaks by size
-            for i in range(len(n_peaks_per_bin_size)):
-                if i == 0: feature_name = f'n_peaks_size_{i}'
-                else: feature_name = f'n_peaks_size_{i}'
-                final_feature_dict[feature_name] = n_peaks_per_bin_size[i]
-
-            feat_stats.append( final_feature_dict )
-            peak_feats.append( {'name':filename, 'peak intensities':peak_intensities, 'fwhms': fwhms, 'hms':hms} ) 
+                feat_stats.append( final_feature_dict )
+                peak_feats.append( {'name':filename, 'peak intensities':peak_intensities, 'fwhms': fwhms, 'hms':hms} ) 
         
-            # except:
-            #     print(f'Error with filename: {filename}, this pattern has {len(peak_data)} peaks.')
-            #     pass
+            except:
+                print(f'Error with filename: {filename}, this pattern has {len(peak_data)} peaks.')
+                pass
         
+        # write all histogram features into csv
         feat_stats_df = pd.DataFrame(feat_stats)
         feat_stats_df.to_csv(f'{self.features_dir}/features_original.csv',index=False)
         print(f'Finished calculating features for {self.input_dir}')
 
     def scale_features(self):
-
+        '''
+        Scales features with min-max scaler and applies PCA
+        '''
         features_original = pd.read_csv(f'{self.features_dir}/features_original.csv')
         non_amorphous_features_original = features_original.query('amorphous == False')
         # filter for features that we actually want to use for clustering
@@ -374,7 +320,17 @@ class ezcluster():
         
         print(f'Finished scaling features + PCA for {self.input_dir}')
 
-    def perform_clustering(self,use_pca=True,gifs=True,max_iter=300,n_init=30,tol=1e4,clustering_name=0):
+    def perform_clustering(self,use_pca=True,gifs=True,max_iter=300,tol=1e4,clustering_name=0):
+        '''
+        Performs clustering on histograms.
+
+        Args:
+            use_pca (bool), default True: use PCA-transformed features
+            gifs (bool), default True: save gifs of clustered plots
+            max_iter (int), default 300: maximum number of iterations for the k-means algorithm
+            tol (float), default 1e4: Relative tolerance with regards to Frobenius norm of the difference in the cluster centers of two consecutive iterations to declare convergence.
+            clustering_name (int), default 0: nth iteration of clustering
+        '''
         self.cluster_dir = f'{self.input_dir}/clusters'
         
         ###### for the initial run only
@@ -437,8 +393,9 @@ class ezcluster():
             log.close()
             return None
 
+        ###### perform clustering
         if len(X_clustering) < self.k_clusters: self.k_clusters = len(X_clustering)
-        kmeans = KMeans(n_clusters=self.k_clusters,n_init=n_init,max_iter=max_iter,tol=tol).fit(X_clustering)
+        kmeans = KMeans(n_clusters=self.k_clusters,max_iter=max_iter,tol=tol,n_init=1).fit(X_clustering)
         cluster_labels[np.nonzero(~is_amorphous)] = kmeans.labels_
     
         ###### save plots for non amorphous xrd patterns
@@ -450,10 +407,12 @@ class ezcluster():
             pickle.dump(kmeans,g)
             g.close()
 
+        ###### Save cluster labels with feature information
         assert(-2 not in cluster_labels)
         original_feature_df['Cluster labels'] = cluster_labels
         original_feature_df.to_csv(f'{self.features_dir}/features_original_w_labels.csv',index=False)
 
+        ###### Write results to log file, set up variables for next round of clustering
         log.write(f'Clustering - {self.k_clusters} clusters \n')
         log.close()
         self.previous_clustering_name = clustering_name
@@ -461,8 +420,10 @@ class ezcluster():
         print(f'Finished clustering {self.previous_clustering_name}')
 
     def get_cluster_similarities(self):
-        log_a = open(f'{self.cluster_dir}/cluster_log.txt','a')
-        log_r = open(f'{self.cluster_dir}/cluster_log.txt','r').read()
+        '''
+        Calculates intra-cluster histogram similarities. Similarity matrices are written locally. 
+        '''
+        log_a, log_r = log_loader(self.cluster_dir)
         
         try:
             wafer_features = pd.read_csv(f'{self.features_dir}/features_original_w_labels.csv')
@@ -479,10 +440,12 @@ class ezcluster():
         print(f'Finished calculating similarities.')
 
     def underclustering_analysis(self,plots=False):
+        '''
+        Determines how many more clusters are needed for the next round of clustering.
+        '''
         additional_clusters_needed = 0
-        log_a = open(f'{self.cluster_dir}/cluster_log.txt','a')
-        log_r = open(f'{self.cluster_dir}/cluster_log.txt','r').read()
 
+        log_a, log_r = log_loader(self.cluster_dir)
 
         similarity_scores_dir = f'{self.cluster_results_dir}/similarity_scores'
 
@@ -508,9 +471,9 @@ class ezcluster():
         for similarity_score_file_path in similarity_score_file_paths:
             similarity_matrix = pd.read_csv(similarity_score_file_path).iloc[:,1:]
 
-            this_cluster_number = int(similarity_score_file_path.split('/')[-1].split('_')[0])
+            cluster = int(similarity_score_file_path.split('/')[-1].split('_')[0])
 
-            cluster_features = features.query(f'`Cluster labels` == {this_cluster_number}')
+            cluster_features = features.query(f'`Cluster labels` == {cluster}')
 
             n_patterns_in_cluster = len(cluster_features)
             if n_patterns_in_cluster < 15: continue # having too few patterns in a cluster makes this function too unreliable 
@@ -543,16 +506,7 @@ class ezcluster():
             if percent_dissimilar_over_threshold > 0.40: additional_clusters_needed += 1
 
             if plots == True:
-                # generate distance plots - will take extra time, can turn off
-                plt.figure()
-                plt.hist(similar_pair_pca_scaled_feature_distances,label='Similar Pairs',alpha=0.5,bins=20,density=True)
-                plt.hist(dissimilar_pair_pca_scaled_feature_distances,label='Dissimilar Pairs',alpha=0.5,bins=20,density=True)
-
-                plt.xlabel('PCA Scaled Feature Distance')
-                plt.ylabel('Probability Distributions')
-                plt.title(f'Cluster: {this_cluster_number} | Pct over threshold: {percent_dissimilar_over_threshold}')
-                plt.savefig(f'{self.post_clustering_dir}/{this_cluster_number}_underclustering_plot.png',dpi=300)
-                plt.close()
+                underclustering_plots(similar_pair_pca_scaled_feature_distances,dissimilar_pair_pca_scaled_feature_distances,cluster,percent_dissimilar_over_threshold,self.post_clustering_dir)
             
 
         underclustering_data = pd.DataFrame(data = {'Current cluster count': [len(similarity_score_file_paths)],
@@ -564,10 +518,11 @@ class ezcluster():
         log_a.close()
         print(f'Finished underclustering analysis.')
 
-    def overclustering_analysis(self,plots=False): # clustering name needs to be the most recent run (highest number)
-
-        log_a = open(f'{self.cluster_dir}/cluster_log.txt','a')
-        log_r = open(f'{self.cluster_dir}/cluster_log.txt','r').read()
+    def overclustering_analysis(self,plots=False,min_distance_frac=0.75): # clustering name needs to be the most recent run (highest number)
+        '''
+        Determines how many fewer clustes are needed for the next round of clustering.
+        '''
+        log_a, log_r = log_loader(self.cluster_dir)
 
         try:
             # get PCA scaled features
@@ -607,33 +562,13 @@ class ezcluster():
 
                 if len(intra_cluster_distances) == 0: continue
 
-                # cutoff = np.quantile(intra_cluster_distances,0.95)
-                cutoff = 0.75 * np.max(intra_cluster_distances)
+                cutoff = min_distance_frac * np.max(intra_cluster_distances)
 
                 n_under_cutoff = np.sum(inter_cluster_distances < cutoff)
                 if n_under_cutoff > (len(all_clusters)-1)/2: n_clusters_to_reduce += 1
                 
                 if plots == True:
-                    # generate plots - this take a while so it's possible to turn this off
-                    fig, ax = plt.subplots()
-                    ax.hist(intra_cluster_distances, label='Point-point',alpha=0.6,color='green')
-
-                    ax.set_xlabel('Distance')
-                    ax.set_ylabel('Count (point-point)')
-                    plt.title(f'Cluster {cluster} | n other clusters within cutoff: {n_under_cutoff}')
-                    
-                    # also plot distance from this cluster's centroid to all other cluster centroids
-                    ax2 = ax.twinx()
-                    ax2.hist(inter_cluster_distances,label='Centroid-centroid',alpha=0.6,color='red')
-                    ax2.set_ylabel('Count (centroid-centroid)',color='red')
-
-                    # get legend
-                    lines, labels = ax.get_legend_handles_labels()
-                    lines2, labels2 = ax2.get_legend_handles_labels()
-                    ax2.legend(lines + lines2, labels + labels2, loc=0)
-
-                    plt.savefig(f'{self.post_clustering_dir}/{cluster}_overclustering_plot.png',dpi=300)
-                    plt.close()
+                    overclustering_plots(intra_cluster_distances,cluster,n_under_cutoff,inter_cluster_distances,self.post_clustering_dir)
         else:
             cutoff = np.nan
             n_under_cutoff = np.nan
@@ -653,9 +588,11 @@ class ezcluster():
         print('Finished overclustering analysis.')
 
     def perform_reclustering(self):
+        '''
+        Reads in the new number of clusters needed and executes next round of clustering.
+        '''
 
-        log_a = open(f'{self.cluster_dir}/cluster_log.txt','a')
-        log_r = open(f'{self.cluster_dir}/cluster_log.txt','r').read()
+        log_a, log_r = log_loader(self.cluster_dir)
 
         try:
             additional_n_clusters = int(np.genfromtxt(f'{self.post_clustering_dir}/reclustering_input'))
@@ -679,18 +616,18 @@ if __name__ == '__main__':
 
     # initialize required values
 
-    clus = ezcluster() # initialize for a SINGLE wafer, should parallelize when possible
+    clus = ezcluster() # initialize for a SINGLE wafer, parallelized when possible
 
-    # split histograms (automatically done over all histograms)
+    # split histograms
     
     array_length = clus.histograms.shape[1]
     smooth_q_background_setting = 20 * (array_length-1)/800 # smooth q value of 20 is calibrated to an array of length 800
     clus.split_histogram(smooth_q_background_setting)
     
-    # find peaks (parallelized over all histograms)
+    # find peaks 
     clus.find_peaks_parallelized_wrapper()
 
-    # plot patterns (parallelized over all histograms)
+    # plot patterns 
     clus.plot_split_data(save_dir='plots')
 
     # calculate features

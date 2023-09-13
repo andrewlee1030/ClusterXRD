@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .peak_processing import *
 from .imgs_to_movie import *
-import shutil
-import os
 
 
 def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'split_histograms', peak_data_dir = 'peaks', save_dir = 'plots',normalize_value = 1,save=True):
@@ -63,8 +61,19 @@ def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'spl
     else:
         plt.show()
 
-def save_kmeans_plots(kmeans, wafer_dir, peak_plot_dir, non_amorphous_names, gifs, gif_dir):
+def save_kmeans_plots(kmeans, wafer_dir, peak_plot_dir, non_amorphous_names, gifs, gif_dir, save_raw_plot=False):
+    '''
+    Moves histogram plots (split histograms with peaks) around based on clustering outcomes, generates gifs of clusters
 
+    Args:
+        kmeans (class sklearn.cluster._kmeans.KMeans): KMeans object after clustering histograms
+        wafer_dir (str): path for this set of histograms
+        peak_plot_dir (str): path to generated histogram plots
+        non_amorphous_names (numpy array): list of non amorphous histogram names
+        gifs (bool): if True, generates histogram gifs for each cluster
+        gifs_dir (str): directory to save gifs into
+        save_raw_plot (bool): if True, also moves raw histogram plots to cluster directories
+    '''
     unique_kmeans_labels = list(set(kmeans.labels_))
     for unique_label in unique_kmeans_labels:
 
@@ -79,8 +88,42 @@ def save_kmeans_plots(kmeans, wafer_dir, peak_plot_dir, non_amorphous_names, gif
         for prefix in matching_prefixes:
             try:
                 shutil.copy(f'{peak_plot_dir}/{prefix}_plot.png',f'{label_dir}/{prefix}_plot.png')
-                shutil.copy(f'{peak_plot_dir}/{prefix}_plot_RAW.png',f'{label_dir}/{prefix}_plot_RAW.png')  
+                if save_raw_plot == True: shutil.copy(f'{peak_plot_dir}/{prefix}_plot_RAW.png',f'{label_dir}/{prefix}_plot_RAW.png')  
             except:
                 pass # will skip over amorphous plots
 
         if gifs == True: make_gif(label_dir,f'label_{unique_label}',gif_dir) 
+
+def overclustering_plots(intra_cluster_distances, cluster, n_under_cutoff, inter_cluster_distances,post_clustering_dir):
+    # generate plots - this take a while so it's possible to turn this off
+    fig, ax = plt.subplots()
+    ax.hist(intra_cluster_distances, label='Point-point',alpha=0.6,color='green')
+
+    ax.set_xlabel('Distance')
+    ax.set_ylabel('Count (point-point)')
+    plt.title(f'Cluster {cluster} | n other clusters within cutoff: {n_under_cutoff}')
+    
+    # also plot distance from this cluster's centroid to all other cluster centroids
+    ax2 = ax.twinx()
+    ax2.hist(inter_cluster_distances,label='Centroid-centroid',alpha=0.6,color='red')
+    ax2.set_ylabel('Count (centroid-centroid)',color='red')
+
+    # get legend
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc=0)
+
+    plt.savefig(f'{post_clustering_dir}/{cluster}_overclustering_plot.png',dpi=300)
+    plt.close()
+
+def underclustering_plots(similar_pair_pca_scaled_feature_distances,dissimilar_pair_pca_scaled_feature_distances,cluster,percent_dissimilar_over_threshold,post_clustering_dir):
+    # generate distance plots - will take extra time, can turn off
+    plt.figure()
+    plt.hist(similar_pair_pca_scaled_feature_distances,label='Similar Pairs',alpha=0.5,bins=20,density=True)
+    plt.hist(dissimilar_pair_pca_scaled_feature_distances,label='Dissimilar Pairs',alpha=0.5,bins=20,density=True)
+
+    plt.xlabel('PCA Scaled Feature Distance')
+    plt.ylabel('Probability Distributions')
+    plt.title(f'Cluster: {cluster} | Pct over threshold: {percent_dissimilar_over_threshold}')
+    plt.savefig(f'{self.post_clustering_dir}/{cluster}_underclustering_plot.png',dpi=300)
+    plt.close()
