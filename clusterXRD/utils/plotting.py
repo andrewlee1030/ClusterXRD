@@ -5,7 +5,15 @@ from .peak_processing import *
 from .imgs_to_movie import *
 
 
-def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'split_histograms', peak_data_dir = 'peaks', save_dir = 'plots',normalize_value = 1,save=True):
+def plot_xrd_with_peaks(histogram_name,
+                        raw_data_dir = '.', 
+                        split_data_dir = 'split_histograms', 
+                        peak_data_dir='peaks', 
+                        save_dir = 'plots',
+                        filename_suffix = '',
+                        normalize_value = 1, 
+                        save=True,
+                        save_raw=False):
 
     '''
     Plots splot XRD histograms with peak location.
@@ -27,7 +35,7 @@ def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'spl
         peak_data = pd.read_csv(f'{peak_data_dir}/{histogram_name}_peaks.csv')
         background_data = np.genfromtxt(f'{split_data_dir}/{histogram_name}_background')/normalize_value
         crystalline_data = np.genfromtxt(f'{split_data_dir}/{histogram_name}_crystalline')/normalize_value
-        raw_xrd_data = pd.read_csv(f'{raw_data_dir}/{histogram_name}_1D.csv',header=None)[1]/normalize_value
+        if save_raw == True: raw_xrd_data = pd.read_csv(f'{raw_data_dir}/{histogram_name}{filename_suffix}',header=None)[1]/normalize_value
     except:
         raise Exception('Cannot read data.')
 
@@ -36,8 +44,9 @@ def plot_xrd_with_peaks(histogram_name,raw_data_dir = '.', split_data_dir = 'spl
     plt.ylabel('Intensity')
 
     # plot raw XRD data
-    plt.plot(raw_xrd_data,'k',label='Raw XRD',linewidth=0.75,alpha=0.6)
-    if save: plt.savefig(f'{save_dir}/{histogram_name}_plot_RAW.png',dpi=300,bbox_inches='tight')
+    if save_raw == True:
+        plt.plot(raw_xrd_data,'k',label='Raw XRD',linewidth=0.75,alpha=0.6)
+        if save: plt.savefig(f'{save_dir}/{histogram_name}_plot_RAW.png',dpi=300,bbox_inches='tight')
 
     # plot background and crystalline raw data
     plt.plot(background_data,label='background',alpha=0.7,linewidth=1)
