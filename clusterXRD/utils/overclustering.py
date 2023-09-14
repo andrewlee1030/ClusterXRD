@@ -16,6 +16,7 @@ def calculate_intra_cluster_distances(pca_transformed_scaled_features,non_amorph
     Returns:
         numpy array: 1D array of distances between histogram pairs within the cluster
     '''
+    
     # for the origin cluster, calculate distances from all points to the centroid
     cluster_features = pca_transformed_scaled_features[non_amorphous_features['Cluster labels'] == cluster_number] #scaled, PCA
     point_point_distances = euclidean_distances(cluster_features).flatten()
@@ -34,6 +35,7 @@ def calculate_inter_cluster_centroid_distances(kmeans,cluster_number):
     Returns:
         numpy array: 1D array of distances to all other centroids
     '''
+    
     # get cluster centroids
     centroids = kmeans.cluster_centers_ # scaled, PCA
 

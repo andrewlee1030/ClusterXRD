@@ -80,7 +80,8 @@ class clusterXRD():
 
         print(f'Initialized clustering class for {self.input_dir}')
 
-    def find_peaks_parallelized_wrapper(self,save_dir='peaks'):
+    def find_peaks_parallelized_wrapper(self,
+                                        save_dir='peaks'):
         '''
         Wrapper function to run the 'find_peaks' function in parallel for all histograms within a wafer. Identifies peak starts, locations, and ends for histograms.
 
@@ -160,7 +161,8 @@ class clusterXRD():
 
         print(f'Finished splitting histograms for {self.input_dir}')
 
-    def plot_split_data(self,save_dir='plots'):
+    def plot_split_data(self,
+                        save_dir='plots'):
         '''
         Plot the split XRD histograms with peak information.
 
@@ -170,6 +172,7 @@ class clusterXRD():
         Returns:
             None: this function calls the plotting function which saves plots locally
         '''
+        
         if self.plot_dir != None: return None # if True, then plots have already been generated
 
         n_parallel_cpus = multiprocessing.cpu_count() - 2 # reserve 2 cores
@@ -345,6 +348,7 @@ class clusterXRD():
             tol (float), default 1e4: Relative tolerance with regards to Frobenius norm of the difference in the cluster centers of two consecutive iterations to declare convergence.
             clustering_name (int), default 0: nth iteration of clustering
         '''
+        
         self.cluster_dir = f'{self.input_dir}/clusters'
         
         ###### for the initial run only
@@ -437,6 +441,7 @@ class clusterXRD():
         '''
         Calculates intra-cluster histogram similarities. Similarity matrices are written locally. 
         '''
+        
         log_a, log_r = log_loader(self.cluster_dir)
         
         try:
@@ -453,10 +458,12 @@ class clusterXRD():
 
         print(f'Finished calculating similarities.')
 
-    def underclustering_analysis(self,plots=False):
+    def underclustering_analysis(self,
+                                 plots=False):
         '''
         Determines how many more clusters are needed for the next round of clustering.
         '''
+        
         additional_clusters_needed = 0
 
         log_a, log_r = log_loader(self.cluster_dir)
@@ -532,10 +539,13 @@ class clusterXRD():
         log_a.close()
         print(f'Finished underclustering analysis.')
 
-    def overclustering_analysis(self,plots=False,min_distance_frac=0.75): # clustering name needs to be the most recent run (highest number)
+    def overclustering_analysis(self,
+                                plots=False,
+                                min_distance_frac=0.75): # clustering name needs to be the most recent run (highest number)
         '''
         Determines how many fewer clustes are needed for the next round of clustering.
         '''
+        
         log_a, log_r = log_loader(self.cluster_dir)
 
         try:
@@ -571,7 +581,7 @@ class clusterXRD():
 
         if len(all_clusters) > 2: # overclustering analysis only works when there are a minimum number of clusters
             for cluster in all_clusters:
-                intra_cluster_distances = calculate_intra_cluster_distances(pca_transformed_scaled_features,non_amorphous_features,cluster,kmeans)
+                intra_cluster_distances = calculate_intra_cluster_distances(pca_transformed_scaled_features,non_amorphous_features,cluster)
                 inter_cluster_distances = np.delete(calculate_inter_cluster_centroid_distances(kmeans,cluster),[cluster])
 
                 if len(intra_cluster_distances) == 0: continue
@@ -641,6 +651,7 @@ def ezCluster(k_clusters,
     Returns:
         None: Will place clusters in a directory within the input_dir
     '''
+    
     clus = clusterXRD(k_clusters=k_clusters,input_dir=input_dir,filename_suffix=filename_suffix)
     
     array_length = clus.histograms.shape[1]

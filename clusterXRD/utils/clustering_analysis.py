@@ -5,7 +5,8 @@ import os
 import shutil
 import matplotlib.pyplot as plt
 
-def clustering_convergence_check(post_clustering_dir,cluster_dir): 
+def clustering_convergence_check(post_clustering_dir,
+                                 cluster_dir): 
     '''
     Checks whether the number of additional/fewer clusters has converged. If so, subsequent rounds of clustering are halted.
 
@@ -88,7 +89,9 @@ def clustering_convergence_check(post_clustering_dir,cluster_dir):
     else: 
         np.savetxt(f'{post_clustering_dir}/reclustering_input',[delta_cluster_number])
 
-def get_similarity_matrix(cluster_features,cluster_dir,split_histograms_dir):
+def get_similarity_matrix(cluster_features,
+                          cluster_dir,
+                          split_histograms_dir):
     '''
     Calculates pairwise similarities between histograms from each cluster.
 
@@ -99,7 +102,6 @@ def get_similarity_matrix(cluster_features,cluster_dir,split_histograms_dir):
 
     Returns:
         None: writes similarity matrix to a local file
-
     '''
 
     try:

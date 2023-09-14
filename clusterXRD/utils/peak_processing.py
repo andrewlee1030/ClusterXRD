@@ -3,7 +3,10 @@ from functools import reduce
 import pandas as pd
 from .featurization import *
 
-def find_peaks(histogram_intensities,histogram_filename,save_dir,stubby_peak_removal=True): 
+def find_peaks(histogram_intensities,
+               histogram_filename,
+               save_dir,
+               stubby_peak_removal=True): 
         '''
         Identifies peak starts, locations, and ends for a given histogram intensity array.
 
@@ -91,7 +94,9 @@ def find_peaks(histogram_intensities,histogram_filename,save_dir,stubby_peak_rem
 
         return df
 
-def remove_stubby_peaks(histogram_intensities,peak_data,min_peak_percentage=0.01):
+def remove_stubby_peaks(histogram_intensities,
+                        peak_data,
+                        min_peak_percentage=0.01):
     '''
     This function filters out peaks that are small (stubby) enough to be ignored.
 
@@ -120,7 +125,10 @@ def remove_stubby_peaks(histogram_intensities,peak_data,min_peak_percentage=0.01
     except:
         return peak_data
 
-def is_amorphous(crystalline_data,background_data,peak_data,max_peak_intensity_this_wafer):
+def is_amorphous(crystalline_data,
+                 background_data,
+                 peak_data,
+                 max_peak_intensity_this_wafer):
     '''
     Detects whether a histogram belongs to an amorphous sample.
 
@@ -155,7 +163,8 @@ def is_amorphous(crystalline_data,background_data,peak_data,max_peak_intensity_t
     if ratio_max_crystal_to_background > 5 and percent_area < 0.15 and max_peak_intensity / max_peak_intensity_this_wafer > 0.2: return False
     else: return True
 
-def smooth_data(histogram_intensities,smooth_radius = 5):
+def smooth_data(histogram_intensities,
+                smooth_radius = 5):
     '''
     Take the rolling average of intensity values over a defined radius
 
@@ -174,7 +183,8 @@ def smooth_data(histogram_intensities,smooth_radius = 5):
         intensities += [weight_coeff*np.roll(histogram_intensities,shift)]
     return np.sum(intensities,axis=0) / np.sum(coeffs)
 
-def euclidean(array_1,array_2):
+def euclidean(array_1,
+              array_2):
     '''
     Takes the euclidean distance between two arrays.
 
@@ -192,7 +202,9 @@ def euclidean(array_1,array_2):
 
     return summed_difference_squared ** 0.5
 
-def get_line_array_from_two_points(point1,point2,n=100):
+def get_line_array_from_two_points(point1,
+                                   point2,
+                                   n=100):
     '''
     Get x,y coordinates of points on a line between two 2D points.
 
@@ -211,7 +223,10 @@ def get_line_array_from_two_points(point1,point2,n=100):
 
     return np.vstack([x_values,y_values]).T
 
-def get_best_offset(histogram_array, background_array, n_array_len = 50, max_offset = 30):
+def get_best_offset(histogram_array,
+                    background_array,
+                    n_array_len = 50,
+                    max_offset = 30):
     '''
     Find the optimal intensity offset for the split_histogram function.
 

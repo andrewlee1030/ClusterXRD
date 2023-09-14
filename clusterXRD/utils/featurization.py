@@ -30,13 +30,16 @@ def get_percentage_area_under_raw_data(histogram_intensities):
     Returns:
         float: value between 0 and 1 representing the proportion under the intensity curve
     '''
+
     max_intensity = np.max(histogram_intensities)
     total_area = max_intensity * (len(histogram_intensities)-1)
     area_under_histogram_intensities = simpson(histogram_intensities)
 
     return area_under_histogram_intensities / total_area
 
-def get_n_floating_peaks(crystalline_data,peak_data,min_threshold = 50):
+def get_n_floating_peaks(crystalline_data,
+                         peak_data,
+                         min_threshold = 50):
     '''
     Count the number of peaks that have peak starts and ends above a certain intensity.
 
@@ -47,8 +50,8 @@ def get_n_floating_peaks(crystalline_data,peak_data,min_threshold = 50):
 
     Returns:
         int: the number of floating peaks
-
     '''
+
     peak_start_intensities = crystalline_data[peak_data['Peak Start Index']]
     peak_end_intensities = crystalline_data[peak_data['Peak End Index']]
 
@@ -58,7 +61,8 @@ def get_n_floating_peaks(crystalline_data,peak_data,min_threshold = 50):
     both_above_threshold = starts_above_threshold & ends_above_threshold
     return np.sum(both_above_threshold)
 
-def get_peak_start_end_intensities(crystalline_data,peak_data):
+def get_peak_start_end_intensities(crystalline_data,
+                                   peak_data):
     '''
     Calculate the mean between peak starts and ends for all peaks in a histogram.
 
@@ -67,8 +71,9 @@ def get_peak_start_end_intensities(crystalline_data,peak_data):
         peak_data (pandas DataFrame): peak starts, locations, and ends
     
     Returns:
-        numpy array: intensities of each averaged peak start and end
+        numpy array: intensities of each averaged peak start and end  
     '''
+    
     peak_start_intensities = crystalline_data[peak_data['Peak Start Index']]
     peak_end_intensities = crystalline_data[peak_data['Peak End Index']]
 
@@ -76,7 +81,9 @@ def get_peak_start_end_intensities(crystalline_data,peak_data):
     
     return averaged_intensities
 
-def get_peak_base_widths(peak_data,crystalline_data,q_width):
+def get_peak_base_widths(peak_data,
+                         crystalline_data,
+                         q_width):
     '''
     Returns the normalized width of all peaks in a histogram.
 
@@ -88,6 +95,7 @@ def get_peak_base_widths(peak_data,crystalline_data,q_width):
     Returns:
         numpy array: normalized widths of each peak
     '''
+    
     widths = peak_data['Peak End Index'] - peak_data['Peak Start Index']
     return widths / len(crystalline_data) / q_width # need to normalize by the total width of the plot AND the q_width
 
@@ -101,6 +109,7 @@ def get_derived_features(data):
     Returns:
         list: [25th percentile, 75th percentile, mean, maximum values] of input values
     '''
+    
     pctile_25 = np.quantile(data,0.25)
     pctile_75 = np.quantile(data,0.75)
     mean = np.mean(data)
@@ -108,7 +117,8 @@ def get_derived_features(data):
 
     return [pctile_25, pctile_75, mean, max]
 
-def get_n_peaks_per_bin_size(peak_intensities,binned_intensities):
+def get_n_peaks_per_bin_size(peak_intensities,
+                             binned_intensities):
     '''
     Counts the number of peaks within specified intensity intervals. For example, when binned_intensities = [100,300,800], returns counts of peaks under 100, between 100 and 300, between 300 and 800, and above 800
     
@@ -119,6 +129,7 @@ def get_n_peaks_per_bin_size(peak_intensities,binned_intensities):
     Returns
         numpy array: the number of peaks between the specified binned intensities
     '''
+    
     n_peaks_per_bin_size = []
 
     for i in range(len(binned_intensities)+1):
@@ -141,7 +152,9 @@ def get_n_peaks_per_bin_size(peak_intensities,binned_intensities):
     
     return n_peaks_per_bin_size
 
-def get_fwhm_v2(peaks,crystalline_data, q_width):
+def get_fwhm_v2(peaks,
+                crystalline_data,
+                q_width):
     '''
     Get the full width at half maximum for each histogram peak.
 
@@ -153,6 +166,7 @@ def get_fwhm_v2(peaks,crystalline_data, q_width):
     Returns:
         array: full width half maximum values for each peak
     '''
+    
     fwhm_array = np.zeros(len(peaks))
 
     for i in range(len(peaks)):

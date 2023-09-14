@@ -11,6 +11,7 @@ def get_point_point_distances(comparison_pairs,pca_scaled_cluster_features):
     Returns:
         numpy array: 1D array of feature distances for each histogram pair specified in comparison pairs
     '''
+    
     pair_pca_scaled_feature_distances = []
 
     for index_pair in comparison_pairs:

@@ -9,6 +9,7 @@ def log_loader(cluster_dir):
         _io.TextIOWrapper: appendable object of clusters log file
         _io.TextIOWrapper: read-only object of clusters log file
     '''
+    
     log_a = open(f'{cluster_dir}/cluster_log.txt','a')
     log_r = open(f'{cluster_dir}/cluster_log.txt','r').read()
 
