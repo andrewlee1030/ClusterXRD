@@ -28,6 +28,7 @@ Run the following command using Python 3.11.0 or higher
 Run the following commands from this directory
 
     cd tests
+    tar -xvf cluster_test_files/sample_xrd_wafer.tar.gz -C cluster_test_files
     python test.py
 
 ### Quick start
@@ -45,3 +46,6 @@ Import the module, define required variables, and call the ezCluster function.
 
 
 ### More advanced use cases
+
+You can adjust how the clustering tool works on a more granular level by adjusting each function defined in the **clusterXRD** class within **clusterXRD.py**.
+
