@@ -14,7 +14,15 @@ class clusterXRD():
     '''
     Should be initialized once per wafer/set of XRD histograms to be analyzed. Contains individual functions that can be used to carry out clustering
     '''
-    def __init__(self,k_clusters=4,input_dir=None,filename_suffix='_1D.csv',features=None,split_histogram_dir=None,peak_dir=None,plot_dir=None,features_dir=None):
+    def __init__(self,
+                 k_clusters=4,
+                 input_dir=None,
+                 filename_suffix='_1D.csv',
+                 features=None,
+                 split_histogram_dir=None,
+                 peak_dir=None,
+                 plot_dir=None,
+                 features_dir=None):
         '''
         Initializes data and variables for clustering on a given histogram.
 
@@ -102,7 +110,10 @@ class clusterXRD():
         p.starmap(find_peaks, multiprocess_plotting_inputs)
         print(f'Finished finding peaks for {self.input_dir}')
 
-    def split_histogram(self,smooth_q_background_setting, save_dir = 'split_histograms', save=True):
+    def split_histogram(self,
+                        smooth_q_background_setting,
+                        save_dir = 'split_histograms',
+                        save=True):
         
         '''
         Splits raw histograms into the crystalline and background components
@@ -172,7 +183,7 @@ class clusterXRD():
 
         # set up multiprocessing inputs
         for filename in self.histogram_filenames:
-            multiprocess_plotting_inputs += [[filename,self.input_dir, self.split_histogram_dir, self.peak_dir, self.plot_dir]]
+            multiprocess_plotting_inputs += [[filename,self.input_dir, self.split_histogram_dir, self.peak_dir, self.plot_dir, self.filename_suffix]]
 
         # execute multiprocessing
         p.starmap(plot_xrd_with_peaks, multiprocess_plotting_inputs)
@@ -318,7 +329,12 @@ class clusterXRD():
         
         print(f'Finished scaling features + PCA for {self.input_dir}')
 
-    def perform_clustering(self,use_pca=True,gifs=True,max_iter=300,tol=1e4,clustering_name=0):
+    def perform_clustering(self,
+                           use_pca=True,
+                           gifs=True,
+                           max_iter=300,
+                           tol=1e4,
+                           clustering_name=0):
         '''
         Performs clustering on histograms.
 
@@ -609,7 +625,10 @@ class clusterXRD():
         self.k_clusters = current_n_clusters + additional_n_clusters
         self.perform_clustering(self,clustering_name = self.clustering_name)
 
-def ezCluster(k_clusters,input_dir,filename_suffix,n_clustering_rounds):
+def ezCluster(k_clusters,
+              input_dir,
+              filename_suffix,
+              n_clustering_rounds):
     '''
     Call this to initiate the full clustering loop for a single wafer/set of histograms to cluster.
 
