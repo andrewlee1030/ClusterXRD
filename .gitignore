@@ -3,3 +3,8 @@ __pycache__
 build/*
 dist/*
 ClusterXRD.egg-info/*
+*_1D.csv
+*_plot.png
+*_background
+*_crystalline
+*_peaks.csv
