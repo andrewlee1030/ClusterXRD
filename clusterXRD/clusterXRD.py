@@ -111,7 +111,7 @@ class clusterXRD():
         p.starmap(find_peaks, multiprocess_plotting_inputs)
         print(f'Finished finding peaks for {self.input_dir}')
 
-    def split_histogram(self,
+    def split_histograms(self,
                         smooth_q_background_setting,
                         save_dir = 'split_histograms',
                         save=True):
@@ -657,7 +657,7 @@ def ezCluster(k_clusters,
     array_length = clus.histograms.shape[1]
     smooth_q_background_setting = 20 * (array_length-1)/800 # smooth q value of 20 is calibrated to an array of length 800
     
-    clus.split_histogram(smooth_q_background_setting)
+    clus.split_histograms(smooth_q_background_setting)
 
     clus.find_peaks_parallelized_wrapper()
     
